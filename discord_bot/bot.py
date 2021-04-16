@@ -20,7 +20,7 @@ async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
 
 
-# @bot.event
+@bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CommandInvokeError):
         await ctx.send('出问题了，休息一下吧。||图太大~~塞不下了，会坏掉的~||')

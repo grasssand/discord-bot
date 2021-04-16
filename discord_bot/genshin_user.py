@@ -13,10 +13,11 @@ MIHOYO_COOKIE_UID = os.getenv('MIHOYO_COOKIE_UID', '100000001')
 MIHOYO_COOKIE_TOKEN = os.getenv('MIHOYO_COOKIE_TOKEN', '')
 
 
-def get_user_info(uid: int) -> dict:
+def get_user_info(uid: int) -> Tuple[dict, list]:
     gs.set_cookie(account_id=int(MIHOYO_COOKIE_UID), cookie_token=MIHOYO_COOKIE_TOKEN)
     user_info = gs.get_user_info(uid, raw=True)
-    return user_info
+    characters = gs.get_all_characters(uid, lang='zh-cn', raw=True)
+    return user_info, characters
 
 
 def set_font(size: int = 20):
@@ -30,7 +31,7 @@ def concat(img1, img2):
     return new_img
 
 
-def create_img(uid: str, user_info: dict) -> BytesIO:
+def create_img(uid: str, user_info: dict, characters: list) -> BytesIO:
     if uid[0] == '1':
         server_name = '天空岛'
     elif uid[0] == '5':
@@ -116,13 +117,13 @@ def create_img(uid: str, user_info: dict) -> BytesIO:
     # avatars
     box_x, box_y = 80, 10
     middle_img = None
-    for i, character in enumerate(user_info['avatars'], 1):
+    for i, character in enumerate(characters, 1):
         if middle_img is None:
             middle_img = Image.open('./static/images/middle.png').resize(
                 (934, 160), Image.BILINEAR
             )
 
-        if character['name'] == 'Traveler':
+        if character['name'] == '旅行者':
             traveler = (
                 Image.open(f"./static/chars/{character['id']}.png")
                 .convert("RGBA")
@@ -142,6 +143,22 @@ def create_img(uid: str, user_info: dict) -> BytesIO:
         )
         char_element.paste(char_img, (0, 0), char_img)
         char_txt = ImageDraw.Draw(char_element)
+        constellations = len(
+            list(filter(lambda x: x['is_actived'], character['constellations']))
+        )
+        char_txt.text(
+            (5, 2),
+            f"C{constellations}",
+            '#9575cd',
+            set_font(14),
+        )
+        w, h = char_txt.textsize(character['name'], set_font(14))
+        char_txt.text(
+            ((100 - w) / 2, 85),
+            character['name'],
+            '#fff',
+            set_font(14),
+        )
         char_txt.text(
             (28, 105),
             f"Lv.{character['level']}",
@@ -177,8 +194,8 @@ def get_user(uid: int) -> Tuple[str, str, BytesIO]:
     filename = f'{uid}.png'
     file = BytesIO()
     try:
-        user_info = get_user_info(uid)
-        file = create_img(str(uid), user_info)
+        user_info, characters = get_user_info(uid)
+        file = create_img(str(uid), user_info, characters)
     except gs.errors.DataNotPublic:
         msg = '该用户隐藏了自己的秘密。'
     except gs.errors.InvalidUID:
