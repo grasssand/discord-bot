@@ -9,12 +9,12 @@ from PIL import Image, ImageDraw, ImageFont
 
 load_dotenv(Path(__file__).resolve().parent.parent / '.env', encoding='utf8')
 
-MIHOYO_COOKIE_UID = os.getenv('MIHOYO_COOKIE_UID', '100000001')
-MIHOYO_COOKIE_TOKEN = os.getenv('MIHOYO_COOKIE_TOKEN', '')
+MIHOYO_COOKIE_LTUID = os.getenv('MIHOYO_COOKIE_LTUID', '100000001')
+MIHOYO_COOKIE_LTOKEN = os.getenv('MIHOYO_COOKIE_LTOKEN', '')
 
 
 def get_user_info(uid: int) -> Tuple[dict, list]:
-    gs.set_cookie(account_id=int(MIHOYO_COOKIE_UID), cookie_token=MIHOYO_COOKIE_TOKEN)
+    gs.set_cookie(ltuid=int(MIHOYO_COOKIE_LTUID), ltoken=MIHOYO_COOKIE_LTOKEN)
     user_info = gs.get_user_info(uid, raw=True)
     characters = gs.get_all_characters(uid, lang='zh-cn', raw=True)
     return user_info, characters
@@ -196,11 +196,11 @@ def get_user(uid: int) -> Tuple[str, str, BytesIO]:
     try:
         user_info, characters = get_user_info(uid)
         file = create_img(str(uid), user_info, characters)
+    except gs.errors.AccountNotFound:
+        msg = '查无此用户。'
     except gs.errors.DataNotPublic:
         msg = '该用户隐藏了自己的秘密。'
-    except gs.errors.InvalidUID:
-        msg = '查无此用户。'
-    except Exception:
+    except Exception as e:
         msg = '查询出错'
 
     return msg, filename, file

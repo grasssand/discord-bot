@@ -24,8 +24,6 @@ async def on_ready():
 async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CommandInvokeError):
         await ctx.send('出问题了，休息一下吧。||图太大~~塞不下了，会坏掉的~||')
-    else:
-        await ctx.send('出大问题了。')
 
 
 @bot.command(name='.', help='来点色图')
