@@ -5,14 +5,14 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from genshin_user import get_user
-from setu import get_setu
+from discord_bot.genshin_user import get_user
+from discord_bot.setu import get_setu
 
 load_dotenv(Path(__file__).resolve().parent.parent / '.env', encoding='utf8')
 
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
 
-bot = commands.Bot(command_prefix='!s', activity=discord.Game('!s.'))
+bot = commands.Bot(command_prefix='!s', activity=discord.Game('!shelp'))
 
 
 @bot.event
@@ -28,7 +28,8 @@ async def on_command_error(ctx, error):
 
 @bot.command(name='.', help='来点色图')
 async def setu(ctx, keyword: str = ''):
-    msg, filename, file = get_setu(keyword)
+    r18 = ctx.channel.is_nsfw()
+    msg, filename, file = get_setu(r18=r18, keyword=keyword)
     if msg:
         await ctx.send(msg, file=discord.File(file, filename=filename))
     else:

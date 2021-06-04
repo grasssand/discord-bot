@@ -25,9 +25,9 @@ def download_img(url: str) -> bytes:
     return resp.content
 
 
-def get_setu(keyword: str) -> Tuple[str, str, BytesIO]:
+def get_setu(r18: bool = False, keyword: str = '') -> Tuple[str, str, BytesIO]:
     url = 'https://api.lolicon.app/setu/'
-    params = {'apikey': SETU_KEY, 'r18': 2, 'num': 1}
+    params = {'apikey': SETU_KEY, 'num': 1, 'r18': 2 if r18 else 0}
     if keyword:
         params['keyword'] = keyword
     resp = requests.get(url, params=params)
