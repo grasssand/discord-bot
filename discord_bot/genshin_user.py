@@ -4,20 +4,26 @@ from pathlib import Path
 from typing import Tuple
 
 import genshinstats as gs
+import requests
 from dotenv import load_dotenv
+from genshinstats.utils import is_chinese
 from PIL import Image, ImageDraw, ImageFont
 
 load_dotenv(Path(__file__).resolve().parent.parent / '.env', encoding='utf8')
 
 MIHOYO_COOKIE_LTUID = os.getenv('MIHOYO_COOKIE_LTUID', '100000001')
 MIHOYO_COOKIE_LTOKEN = os.getenv('MIHOYO_COOKIE_LTOKEN', '')
+HOYOLAB_COOKIE_LTUID = os.getenv('HOYOLAB_COOKIE_LTUID', '100000001')
+HOYOLAB_COOKIE_LTOKEN = os.getenv('HOYOLAB_COOKIE_LTOKEN', '')
 
-
-def get_user_info(uid: int) -> Tuple[dict, list]:
-    gs.set_cookie(ltuid=int(MIHOYO_COOKIE_LTUID), ltoken=MIHOYO_COOKIE_LTOKEN)
-    user_info = gs.get_user_info(uid, raw=True)
-    characters = gs.get_all_characters(uid, lang='zh-cn', raw=True)
-    return user_info, characters
+SERVER_NAME = {
+    '1': '天空岛',
+    '5': '世界树',
+    '6': '美服',
+    '7': '欧服',
+    '8': '亚服',
+    '9': '港澳台服',
+}
 
 
 def set_font(size: int = 20):
@@ -31,26 +37,23 @@ def concat(img1, img2):
     return new_img
 
 
-def create_img(uid: str, user_info: dict, characters: list) -> BytesIO:
-    if uid[0] == '1':
-        server_name = '天空岛'
-    elif uid[0] == '5':
-        server_name = '世界树'
-    elif uid[0] == '6':
-        server_name = '美服'
-    elif uid[0] == '7':
-        server_name = '欧服'
-    elif uid[0] == '8':
-        server_name = '亚服'
-    elif uid[0] == '9':
-        server_name = '港澳台服'
-    else:
-        server_name = ''
+def check_char_img(character: dict) -> Path:
+    img_path = Path(f"./static/chars/{character['id']}.png")
+    if not img_path.is_file():
+        resp = requests.get(character['icon'])
+        with open(img_path, 'wb') as f:
+            for chunk in resp.iter_content(chunk_size=128):
+                f.write(chunk)
 
+    return img_path
+
+
+def create_img(uid: str, user_info: dict, characters: list) -> BytesIO:
+    sname = SERVER_NAME.get(uid[0], '')
     img = Image.open('./static/images/top.png').convert("RGBA")
     text_draw = ImageDraw.Draw(img)
     text_draw.text((250, 120), f'UID {uid}', '#263238', set_font(32))
-    text_draw.text((350, 170), server_name, '#424242', set_font(28))
+    text_draw.text((350, 170), sname, '#424242', set_font(28))
 
     # stats
     stats = user_info['stats']
@@ -123,9 +126,11 @@ def create_img(uid: str, user_info: dict, characters: list) -> BytesIO:
                 (934, 160), Image.BILINEAR
             )
 
+        char_img_path = check_char_img(character)
+
         if character['name'] == '旅行者':
             traveler = (
-                Image.open(f"./static/chars/{character['id']}.png")
+                Image.open(char_img_path)
                 .convert("RGBA")
                 .resize((180, 180), Image.BILINEAR)
             )
@@ -137,9 +142,7 @@ def create_img(uid: str, user_info: dict, characters: list) -> BytesIO:
             .resize((100, 150), Image.BILINEAR)
         )
         char_img = (
-            Image.open(f"./static/chars/{character['id']}.png")
-            .convert("RGBA")
-            .resize((100, 100), Image.BILINEAR)
+            Image.open(char_img_path).convert("RGBA").resize((100, 100), Image.BILINEAR)
         )
         char_element.paste(char_img, (0, 0), char_img)
         char_txt = ImageDraw.Draw(char_element)
@@ -187,6 +190,18 @@ def create_img(uid: str, user_info: dict, characters: list) -> BytesIO:
     img.close()
 
     return file
+
+
+def get_user_info(uid: int) -> Tuple[dict, list]:
+    cn = is_chinese(uid)
+    gs.set_cookie(
+        ltuid=MIHOYO_COOKIE_LTUID if cn else HOYOLAB_COOKIE_LTUID,
+        ltoken=MIHOYO_COOKIE_LTOKEN if cn else HOYOLAB_COOKIE_LTOKEN,
+    )
+
+    user_info = gs.get_user_info(uid, raw=True)
+    characters = gs.get_all_characters(uid, lang='zh-cn', raw=True)
+    return user_info, characters
 
 
 def get_user(uid: int) -> Tuple[str, str, BytesIO]:
