@@ -46,5 +46,12 @@ async def genshin_user(ctx, uid: int):
         await ctx.send(file=discord.File(file, filename=filename))
 
 
+@bot.command(name='d', help='删除bot上条回复。不喜欢的涩图？那就跳过吧')
+async def delete_last_message(ctx):
+    message = await ctx.channel.history(limit=20).get(author=bot.user)
+    if message:
+        await message.delete()
+
+
 if __name__ == '__main__':
     bot.run(DISCORD_TOKEN)
