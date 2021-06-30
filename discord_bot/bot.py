@@ -6,30 +6,41 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 from discord_bot.genshin_user import get_user
+from discord_bot.logger import logger
 from discord_bot.setu import get_setu
 
 load_dotenv(Path(__file__).resolve().parent.parent / '.env', encoding='utf8')
 
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
+DISCORD_PROXY = os.getenv('DISCORD_PROXY')
+DISCORD_COMMAND_PREFIX = os.getenv('DISCORD_COMMAND_PREFIX', '!s')
 
-bot = commands.Bot(command_prefix='!s', activity=discord.Game('!shelp'))
+log = logger(__name__)
+
+bot = commands.Bot(
+    command_prefix=DISCORD_COMMAND_PREFIX,
+    activity=discord.Game(f'{DISCORD_COMMAND_PREFIX}help'),
+    proxy=DISCORD_PROXY,
+)
 
 
 @bot.event
 async def on_ready():
-    print(f'{bot.user.name} has connected to Discord!')
+    log.info(f'{bot.user.name} has connected to Discord!')
 
 
 @bot.event
 async def on_command_error(ctx, error):
+    log.error(str(error))
     if isinstance(error, commands.errors.CommandInvokeError):
-        await ctx.send('出问题了，休息一下吧。||图太大~~塞不下了，会坏掉的~||')
+        await ctx.send('出问题了，休息一下吧。||不要···会坏掉的···||')
 
 
 @bot.command(name='.', help='来点色图')
 async def setu(ctx, keyword: str = ''):
-    r18 = ctx.channel.is_nsfw()
-    msg, filename, file = get_setu(r18=r18, keyword=keyword)
+    log.info(ctx.author)
+    r18 = 2 if ctx.channel.is_nsfw() else 0
+    msg, filename, file = await get_setu(r18=r18, keyword=keyword)
     if msg:
         await ctx.send(msg, file=discord.File(file, filename=filename))
     else:

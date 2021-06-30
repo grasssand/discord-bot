@@ -1,51 +1,48 @@
-import os
-import random
 from io import BytesIO
-from pathlib import Path
 from typing import Tuple
 
-import requests
+import aiohttp
 
-SETU_KEY = os.getenv('SETU_KEY')
+from discord_bot.logger import logger
 
+URL = 'https://api.lolicon.app/setu/v2'
 
-def get_local_img() -> Path:
-    dir = Path('.')
-    files = list(dir.glob('**/*'))
-    img = random.choice(files)
-    return img
+log = logger(__name__)
 
 
-def download_img(url: str) -> bytes:
+async def fetch_img(session: aiohttp.ClientSession, url: str) -> bytes:
     headers = {
         'Referer': 'https://www.pixiv.net/',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36 Edg/89.0.774.68',
     }
-    resp = requests.get(url, headers=headers)
-    return resp.content
+    async with session.get(url, headers=headers) as resp:
+        return await resp.read()
 
 
-def get_setu(r18: bool = False, keyword: str = '') -> Tuple[str, str, BytesIO]:
-    url = 'https://api.lolicon.app/setu/'
-    params = {'apikey': SETU_KEY, 'num': 1, 'r18': 2 if r18 else 0}
-    if keyword:
-        params['keyword'] = keyword
-    resp = requests.get(url, params=params)
-    json_data = resp.json()
-    print(json_data)
-
+async def get_setu(r18: int = 0, keyword: str = '') -> Tuple[str, str, BytesIO]:
     msg = ''
     filename = ''
     file = BytesIO()
-    if json_data['code'] == 0:
-        data = json_data['data'][0]
-        msg = (
-            f">>> *Source:* <https://www.pixiv.net/artworks/{data['pid']}>\n"
-            f"*Title:* {data['title']}\n"
-            f"*Author:* {data['author']}\n"
-            f"*Tags:* {'|'.join(data['tags'])}"
-        )
-        filename = data['url'].split('/')[-1]
-        file = BytesIO(download_img(data['url']))
+
+    params = {'r18': r18, 'size': ['original', 'regular']}
+    if keyword:
+        params['tag'] = keyword.split(',')
+    async with aiohttp.ClientSession() as session:
+        async with session.post(URL, json=params) as resp:
+            json_data = await resp.json()
+            log.info(json_data)
+
+            if json_data['data']:
+                data = json_data['data'][0]
+                img_url = data['urls']['regular']
+                msg = (
+                    f">>> *Source:* <https://www.pixiv.net/artworks/{data['pid']}>\n"
+                    f"*Title:* {data['title']}\n"
+                    f"*Author:* {data['author']}\n"
+                    f"*Tags:* {'|'.join(data['tags'])}"
+                )
+                filename = img_url.split('/')[-1]
+                img = await fetch_img(session, img_url)
+                file = BytesIO(img)
 
     return msg, filename, file
