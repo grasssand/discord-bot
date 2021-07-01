@@ -24,7 +24,7 @@ async def get_setu(r18: int = 0, keyword: str = '') -> Tuple[str, str, BytesIO]:
     filename = ''
     file = BytesIO()
 
-    params = {'r18': r18, 'size': ['original', 'regular']}
+    params = {'r18': r18, 'size': ['original', 'regular'], 'proxy': ''}
     if keyword:
         params['tag'] = keyword.split(',')
     async with aiohttp.ClientSession() as session:

@@ -49,11 +49,10 @@ async def setu(ctx, keyword: str = ''):
 
 @bot.command(name='u', help='查询游戏角色')
 async def genshin_user(ctx, uid: int):
-    msg, filename, file = get_user(uid)
+    msg, filename, file = await get_user(uid)
     if msg:
         await ctx.send(msg)
     else:
-        file.seek(0)
         await ctx.send(file=discord.File(file, filename=filename))
 
 
