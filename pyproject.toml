@@ -11,6 +11,7 @@ python-dotenv = "^0.15.0"
 requests = "^2.25.1"
 genshinstats = "^1.4.4"
 pillow = "^8.2.0"
+aiofiles = "^0.7.0"
 
 [tool.poetry.dev-dependencies]
 black = "^20.8b1"

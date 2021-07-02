@@ -5,7 +5,7 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from discord_bot.genshin_user import get_user
+from discord_bot.genshin_user import genshin_user_character, genshin_user_info
 from discord_bot.logger import logger
 from discord_bot.setu import get_setu
 
@@ -38,7 +38,7 @@ async def on_command_error(ctx, error):
 
 @bot.command(name='.', help='来点色图')
 async def setu(ctx, keyword: str = ''):
-    log.info(ctx.author)
+    log.info(f'setu for {ctx.author}')
     r18 = 2 if ctx.channel.is_nsfw() else 0
     msg, filename, file = await get_setu(r18=r18, keyword=keyword)
     if msg:
@@ -47,9 +47,18 @@ async def setu(ctx, keyword: str = ''):
         await ctx.send('CD 冷却中。。。||强撸灰飞烟灭||')
 
 
-@bot.command(name='u', help='查询游戏角色')
+@bot.command(name='u', help='查询游戏账户')
 async def genshin_user(ctx, uid: int):
-    msg, filename, file = await get_user(uid)
+    msg, filename, file = await genshin_user_info(uid)
+    if msg:
+        await ctx.send(msg)
+    else:
+        await ctx.send(file=discord.File(file, filename=filename))
+
+
+@bot.command(name='c', help='查询游戏角色详情')
+async def genshin_character(ctx, uid: int, character_name: str):
+    msg, filename, file = await genshin_user_character(uid, character_name)
     if msg:
         await ctx.send(msg)
     else:
