@@ -44,7 +44,7 @@ async def setu(ctx, keyword: str = ''):
     if msg:
         await ctx.send(msg, file=discord.File(file, filename=filename))
     else:
-        await ctx.send('CD 冷却中。。。||强撸灰飞烟灭||')
+        await ctx.send('没有这种涩图。。||(つд⊂)这未免也太变态了吧||')
 
 
 @bot.command(name='u', help='查询游戏账户')

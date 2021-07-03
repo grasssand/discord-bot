@@ -258,7 +258,7 @@ async def draw_char_img(uid: int, character: dict) -> BytesIO:
         ELEMENT_BACKGROUND_COLORS.get(character['element'], '#B3B3B3'),
     )
     img.paste(background, (20, 20))
-    img.paste(char_img, (200, 40), char_img)
+    img.paste(char_img, (240, 40), char_img)
 
     # base info
     element_img = Image.open(
@@ -420,14 +420,20 @@ async def get_user_characters(uid: int) -> list:
     if outdated:
         log.info(f'search user characters: {uid}')
         stats = await get_user_stats(uid)
-        character_ids = [i['id'] for i in stats['avatars']]
+        character_ids = []
+        traveler = {}
+        for i in stats['avatars']:
+            character_ids.append(i['id'])
+            if i['id'] in [10000007, 10000005]:
+                traveler = i
+
         server = gs.recognize_server(uid)
         cn = is_chinese(uid)
         gs.set_cookie(
             ltuid=MIHOYO_COOKIE_LTUID if cn else HOYOLAB_COOKIE_LTUID,
             ltoken=MIHOYO_COOKIE_LTOKEN if cn else HOYOLAB_COOKIE_LTOKEN,
         )
-        data = await gs.asyncify(
+        resp = await gs.asyncify(
             gs.fetch_endpoint,
             "game_record/genshin/api/character",
             chinese=cn,
@@ -435,11 +441,18 @@ async def get_user_characters(uid: int) -> list:
             json=dict(character_ids=character_ids, role_id=uid, server=server),
             headers={'x-rpc-language': 'zh-cn'},
         )
+        data = resp['avatars']
+        for character in data[::-1]:
+            if character['id'] == traveler['id']:
+                character['element'] = traveler['element']
+                character['name'] = '荧' if character['id'] == 10000007 else '空'
+                break
+
         stats = {'updated': datetime.now().timestamp(), 'data': data}
         async with aiofiles.open(cache_path, 'w', encoding='utf8') as f:
             await f.write(json.dumps(stats))
 
-    return data['avatars']
+    return data
 
 
 async def genshin_user_info(uid: int) -> Tuple[str, str, BytesIO]:
@@ -466,14 +479,22 @@ async def genshin_user_character(
     msg = ''
     filename = f'{uid}_{character_name}.png'
     file = BytesIO()
-    character_id = GENSHIN_CHARACTER_ID.get(character_name.lower())
+    character_name = character_name.lower()
+    character_id = (
+        [GENSHIN_CHARACTER_ID.get(character_name)]
+        if GENSHIN_CHARACTER_ID.get(character_name)
+        else []
+    )
+    if character_name in ['旅行者', 'traveler', '主角']:
+        character_id += [10000007, 10000005]
+
     try:
         if not character_id:
             raise gs.errors.GenshinStatsException(f'没有**{character_name}**，请输入正确的角色名')
 
         user_characters = await get_user_characters(uid)
         for character in user_characters:
-            if character['id'] == character_id:
+            if character['id'] in character_id:
                 log.info(f"uid[{uid}]: {character['name']}[{character['id']}]")
                 file = await draw_char_img(uid, character)
                 break
