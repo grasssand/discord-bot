@@ -1,5 +1,6 @@
 import json
 import os
+import textwrap
 from datetime import datetime, timedelta
 from enum import Enum
 from io import BytesIO
@@ -296,27 +297,37 @@ async def draw_char_img(uid: int, character: dict) -> BytesIO:
     )
 
     # weapon
-    item_img = Image.new('RGBA', (80, 80))
-    item_draw = ImageDraw.Draw(item_img)
-    item_draw.rounded_rectangle((0, 0, 80, 80), radius=10, fill=element_color)
     weapon = character['weapon']
     weapon_img_path = await get_img_path(
         SourceType.Weapon, weapon['id'], weapon['icon']
     )
-    weapon_img = Image.open(weapon_img_path).resize((80, 80)).convert('RGBA')
+    weapon_img = Image.open(weapon_img_path).resize((100, 100)).convert('RGBA')
 
-    item_img.paste(weapon_img, (0, 0), weapon_img)
-    item_draw.text(
-        (2, 2), f"+{weapon['level']}·精{weapon['affix_level']}", font=set_font(12)
+    img.paste(weapon_img, (40, 320), weapon_img)
+    text_draw.text(
+        (150, 320),
+        f"{weapon['name']}",
+        fill=element_color,
+        font=set_font(26),
     )
-    w, h = item_draw.textsize(f"{'★' * weapon['rarity']}", set_font(14))
-    item_draw.text(
-        ((80 - w) / 2, (80 - h - 2)),
+    w, h = text_draw.textsize(weapon['name'], font=set_font(26))
+    text_draw.text(
+        (w + 156, h + 300),
+        f"+{weapon['level']} · 精{weapon['affix_level']}",
+        fill=element_color,
+        font=set_font(18),
+    )
+    text_draw.text(
+        (150, 350),
         f"{'★' * weapon['rarity']}",
         fill='#FFD942',
-        font=set_font(14),
+        font=set_font(22),
     )
-    img.paste(item_img, (120, 360), item_img)
+    text_draw.text(
+        (150, 376),
+        '\n'.join(textwrap.wrap(weapon['desc'], width=20)),
+        font=set_font(12),
+    )
 
     # artifacts
     artifacts = character['reliquaries']
@@ -330,15 +341,26 @@ async def draw_char_img(uid: int, character: dict) -> BytesIO:
         )
         artifact_img = Image.open(artifact_img_path).resize((80, 80)).convert('RGBA')
         item_img.paste(artifact_img, (0, 0), artifact_img)
-        item_draw.text((2, 2), f"+{artifact['level']}", font=set_font(12))
-        w, h = item_draw.textsize(f"{'★' * artifact['rarity']}", set_font(14))
-        item_draw.text(
-            ((80 - w) / 2, (80 - h - 2)),
+        img.paste(item_img, (pos_x, pos_y), item_img)
+        text_draw.text(
+            (pos_x + 90, pos_y),
+            f"{artifact['name']}",
+            fill=element_color,
+            font=set_font(22),
+        )
+        w, h = text_draw.textsize(artifact['name'], font=set_font(22))
+        text_draw.text(
+            (pos_x + w + 96, pos_y + h - 20),
+            f"+{artifact['level']}",
+            fill=element_color,
+            font=set_font(18),
+        )
+        text_draw.text(
+            (pos_x + 90, pos_y + 26),
             f"{'★' * artifact['rarity']}",
             fill='#FFD942',
-            font=set_font(14),
+            font=set_font(22),
         )
-        img.paste(item_img, (pos_x, pos_y), item_img)
         pos_y += 100
 
     file = BytesIO()
