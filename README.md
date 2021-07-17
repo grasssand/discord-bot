@@ -4,11 +4,9 @@
 ## Start
 
 ```
-$ pip instal -r requirements.txt
+$ pip install -r requirements.txt
 $ python discord_bot/bot.py
 ```
-
-or
 
 ## Thanks
 - *setu api* <https://api.lolicon.app/#/setu>
