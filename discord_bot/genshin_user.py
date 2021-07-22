@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from genshinstats.utils import is_chinese
 from PIL import Image, ImageDraw, ImageFont
 
-from discord_bot.genshin_character_id import GENSHIN_CHARACTER_ID
+from discord_bot import database as db
 from discord_bot.logger import logger
 
 log = logger(__name__)
@@ -68,7 +68,7 @@ def set_font(size: int = 20):
 
 
 def concat_img(img1, img2):
-    new_img = Image.new('RGB', (img1.width, img1.height + img2.height))
+    new_img = Image.new('RGBA', (img1.width, img1.height + img2.height))
     new_img.paste(img1, (0, 0))
     new_img.paste(img2, (0, img1.height))
     return new_img
@@ -117,57 +117,87 @@ async def draw_user_img(uid: int, user_stats: dict) -> BytesIO:
     )
     text_draw.text((960, 292), f"{stats['anemoculus_number']}", '#263238', set_font(32))
     text_draw.text((960, 346), f"{stats['geoculus_number']}", '#263238', set_font(32))
-    text_draw.text((960, 400), f"--", '#263238', set_font(32))
+    text_draw.text(
+        (960, 400), f"{stats['electroculus_number']}", '#263238', set_font(32)
+    )
 
     # home
-    homes = ['hole', 'mountain', 'island']
-    y = 110
-    layer = Image.new('L', (213, 213))
+    homes = user_stats['homes']
+    if homes:
+        text_draw.text(
+            (1160, 100), f"仙力 {homes[0]['comfort_num']}", '#263238', set_font(28)
+        )
+        text_draw.text(
+            (1180, 150), f"{homes[0]['comfort_level_name']}", '#263238', set_font(28)
+        )
+
+    y = 200
+    size = (180, 180)
+    layer = Image.new('L', size)
     draw = ImageDraw.Draw(layer)
-    draw.rounded_rectangle((0, 0, 213, 213), fill=255, radius=30)
-    for home in homes:
-        with Image.open(f'./static/images/{home}.png').convert('RGBA') as f:
-            layer.paste(f, (0, 0), layer)
-            img.paste(f, (1130, y), layer)
-        y += 230
+    draw.rounded_rectangle((0, 0, *size), fill=255, radius=30)
+    for home in ['hole', 'mountain', 'island']:
+        with Image.open(f'./static/genshin/homes/{home}.png').resize(size).convert(
+            'RGBA'
+        ) as f:
+            if not homes:
+                layer.paste(f, (0, 0), layer)
+            img.paste(f, (1150, y), layer)
+        y += 200
 
     # world_explorations
     world_explorations = user_stats['world_explorations']
+    # id=4 稻妻
     text_draw.text(
-        (120, 710),
-        f"{world_explorations[1]['exploration_percentage'] / 10}%",
-        '#fff',
-        set_font(28),
-    )
-    text_draw.text(
-        (260, 710),
-        f"Lv.{world_explorations[1]['level']}",
-        '#fff',
-        set_font(28),
-    )
-    text_draw.text(
-        (460, 710),
-        f"{world_explorations[2]['exploration_percentage'] / 10}%",
-        '#fff',
-        set_font(28),
-    )
-    text_draw.text(
-        (600, 710),
-        f"Lv.{world_explorations[2]['level']}",
-        '#fff',
-        set_font(28),
-    )
-    text_draw.text(
-        (800, 710),
+        (300, 568),
         f"{world_explorations[0]['exploration_percentage'] / 10}%",
         '#fff',
-        set_font(28),
+        set_font(24),
     )
     text_draw.text(
-        (940, 710),
-        f"Lv.{world_explorations[0]['level']}",
+        (300, 616),
+        f"Lv.{world_explorations[0]['level']} / Lv.{world_explorations[0]['offerings'][0]['level']}(神樱)",
         '#fff',
-        set_font(28),
+        set_font(24),
+    )
+    # id=3 龙脊雪山
+    text_draw.text(
+        (840, 568),
+        f"{world_explorations[1]['exploration_percentage'] / 10}%",
+        '#fff',
+        set_font(24),
+    )
+    text_draw.text(
+        (840, 616),
+        f"Lv.{world_explorations[1]['level']}",
+        '#fff',
+        set_font(24),
+    )
+    # id=2 璃月
+    text_draw.text(
+        (300, 720),
+        f"{world_explorations[2]['exploration_percentage'] / 10}%",
+        '#fff',
+        set_font(24),
+    )
+    text_draw.text(
+        (300, 768),
+        f"Lv.{world_explorations[2]['level']}",
+        '#fff',
+        set_font(24),
+    )
+    # id=1 蒙德
+    text_draw.text(
+        (840, 720),
+        f"{world_explorations[3]['exploration_percentage'] / 10}%",
+        '#fff',
+        set_font(24),
+    )
+    text_draw.text(
+        (840, 768),
+        f"Lv.{world_explorations[3]['level']}",
+        '#fff',
+        set_font(24),
     )
 
     # avatars
@@ -399,8 +429,7 @@ async def get_user_stats(uid: int) -> dict:
             ltuid=MIHOYO_COOKIE_LTUID if cn else HOYOLAB_COOKIE_LTUID,
             ltoken=MIHOYO_COOKIE_LTOKEN if cn else HOYOLAB_COOKIE_LTOKEN,
         )
-        data = await gs.asyncify(
-            gs.fetch_endpoint,
+        data = gs.fetch_endpoint(
             "game_record/genshin/api/index",
             chinese=cn,
             params=dict(server=server, role_id=uid),
@@ -433,8 +462,7 @@ async def get_user_characters(uid: int) -> list:
             ltuid=MIHOYO_COOKIE_LTUID if cn else HOYOLAB_COOKIE_LTUID,
             ltoken=MIHOYO_COOKIE_LTOKEN if cn else HOYOLAB_COOKIE_LTOKEN,
         )
-        resp = await gs.asyncify(
-            gs.fetch_endpoint,
+        resp = gs.fetch_endpoint(
             "game_record/genshin/api/character",
             chinese=cn,
             method='POST',
@@ -467,7 +495,7 @@ async def genshin_user_info(uid: int) -> Tuple[str, str, BytesIO]:
     except gs.errors.DataNotPublic:
         msg = '该用户隐藏了自己的秘密。'
     except Exception as e:
-        log.error(str(e))
+        log.error(e)
         msg = '查询出错'
 
     return msg, filename, file
@@ -479,16 +507,9 @@ async def genshin_user_character(
     msg = ''
     filename = f'{uid}_{character_name}.png'
     file = BytesIO()
-    character_name = character_name.lower()
-    character_id = (
-        [GENSHIN_CHARACTER_ID.get(character_name)]
-        if GENSHIN_CHARACTER_ID.get(character_name)
-        else []
-    )
-    if character_name in ['旅行者', 'traveler', '主角']:
-        character_id += [10000007, 10000005]
 
     try:
+        character_id = db.get_character_id_by_name(character_name)
         if not character_id:
             raise gs.errors.GenshinStatsException(f'没有**{character_name}**，请输入正确的角色名')
 
@@ -507,7 +528,7 @@ async def genshin_user_character(
     except gs.errors.GenshinStatsException as e:
         msg = e.msg
     except Exception as e:
-        log.error(str(e))
+        log.error(e)
         msg = '查询出错'
 
     return msg, filename, file

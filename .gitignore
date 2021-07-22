@@ -2,5 +2,7 @@
 .vscode/
 
 .env
+
 poetry.lock
 test*.py
+db.sqlite

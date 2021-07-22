@@ -31,7 +31,7 @@ async def on_ready():
 
 @bot.event
 async def on_command_error(ctx, error):
-    log.error(str(error))
+    log.error(error)
     if isinstance(error, commands.errors.CommandInvokeError):
         await ctx.send('出问题了，休息一下吧。||不要···会坏掉的···||')
 
