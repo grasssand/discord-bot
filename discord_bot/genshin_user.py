@@ -149,52 +149,58 @@ async def draw_user_img(uid: int, user_stats: dict) -> BytesIO:
     world_explorations = user_stats['world_explorations']
     # id=4 稻妻
     text_draw.text(
-        (300, 568),
+        (400, 548),
         f"{world_explorations[0]['exploration_percentage'] / 10}%",
         '#fff',
         set_font(24),
     )
     text_draw.text(
-        (300, 616),
-        f"Lv.{world_explorations[0]['level']} / Lv.{world_explorations[0]['offerings'][0]['level']}(神樱)",
+        (320, 610),
+        f"Lv.{world_explorations[0]['level']}",
+        '#fff',
+        set_font(24),
+    )
+    text_draw.text(
+        (462, 610),
+        f"Lv.{world_explorations[0]['offerings'][0]['level']}",
         '#fff',
         set_font(24),
     )
     # id=3 龙脊雪山
     text_draw.text(
-        (840, 568),
+        (900, 548),
         f"{world_explorations[1]['exploration_percentage'] / 10}%",
         '#fff',
         set_font(24),
     )
     text_draw.text(
-        (840, 616),
+        (900, 610),
         f"Lv.{world_explorations[1]['level']}",
         '#fff',
         set_font(24),
     )
     # id=2 璃月
     text_draw.text(
-        (300, 720),
+        (400, 700),
         f"{world_explorations[2]['exploration_percentage'] / 10}%",
         '#fff',
         set_font(24),
     )
     text_draw.text(
-        (300, 768),
+        (400, 764),
         f"Lv.{world_explorations[2]['level']}",
         '#fff',
         set_font(24),
     )
     # id=1 蒙德
     text_draw.text(
-        (840, 720),
+        (900, 700),
         f"{world_explorations[3]['exploration_percentage'] / 10}%",
         '#fff',
         set_font(24),
     )
     text_draw.text(
-        (840, 768),
+        (900, 764),
         f"Lv.{world_explorations[3]['level']}",
         '#fff',
         set_font(24),
