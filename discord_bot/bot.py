@@ -49,6 +49,7 @@ async def setu(ctx, keyword: str = ''):
 
 @bot.command(name='u', help='查询游戏账户')
 async def genshin_user(ctx, uid: int):
+    log.info(f'{ctx.author}, {uid}')
     msg, filename, file = await genshin_user_info(uid)
     if msg:
         await ctx.send(msg)
@@ -58,6 +59,7 @@ async def genshin_user(ctx, uid: int):
 
 @bot.command(name='c', help='查询游戏角色详情')
 async def genshin_character(ctx, uid: int, character_name: str):
+    log.info(f'{ctx.author}, {uid}, {character_name}')
     msg, filename, file = await genshin_user_character(uid, character_name)
     if msg:
         await ctx.send(msg)

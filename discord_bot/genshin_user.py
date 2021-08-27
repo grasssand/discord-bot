@@ -63,6 +63,31 @@ class SourceType(Enum):
     Artifact = 'artifacts'
 
 
+def format_comfort_level_name(num: int) -> str:
+    if num >= 20000:
+        name = '贝阙珠宫'
+    elif num >= 15000:
+        name = '广夏细旃'
+    elif num >= 12000:
+        name = '丹楹刻桷'
+    elif num >= 10000:
+        name = '富丽堂皇'
+    elif num >= 8000:
+        name = '美轮美奂'
+    elif num >= 6000:
+        name = '初显锦绣'
+    elif num >= 4500:
+        name = '高门打屋'
+    elif num >= 3000:
+        name = '屋舍俨然'
+    elif num >= 2000:
+        name = '竹篱茅舍'
+    else:
+        name = '初有陋室'
+
+    return name
+
+
 def set_font(size: int = 20):
     return ImageFont.truetype('./static/fonts/font.ttf', size=size)
 
@@ -93,7 +118,7 @@ async def draw_user_img(uid: int, user_stats: dict) -> BytesIO:
     img = Image.open('./static/images/info-new-upper.png').convert('RGBA')
     text_draw = ImageDraw.Draw(img)
     text_draw.text((280, 120), f'UID {uid}', '#263238', set_font(34))
-    text_draw.text((400, 170), server, '#424242', set_font(30))
+    text_draw.text((380, 170), server, '#424242', set_font(30))
 
     # stats
     stats = user_stats['stats']
@@ -102,7 +127,7 @@ async def draw_user_img(uid: int, user_stats: dict) -> BytesIO:
         (280, 346), f"{stats['achievement_number']}", '#263238', set_font(32)
     )
     text_draw.text((280, 400), f"{stats['avatar_number']}", '#263238', set_font(32))
-    text_draw.text((280, 454), f"{stats['spiral_abyss']}", '#263238', set_font(32))
+    text_draw.text((280, 452), f"{stats['spiral_abyss']}", '#263238', set_font(32))
     text_draw.text(
         (620, 292), f"{stats['common_chest_number']}", '#263238', set_font(32)
     )
@@ -113,7 +138,7 @@ async def draw_user_img(uid: int, user_stats: dict) -> BytesIO:
         (620, 400), f"{stats['precious_chest_number']}", '#263238', set_font(32)
     )
     text_draw.text(
-        (620, 454), f"{stats['luxurious_chest_number']}", '#263238', set_font(32)
+        (620, 452), f"{stats['luxurious_chest_number']}", '#263238', set_font(32)
     )
     text_draw.text((960, 292), f"{stats['anemoculus_number']}", '#263238', set_font(32))
     text_draw.text((960, 346), f"{stats['geoculus_number']}", '#263238', set_font(32))
@@ -128,7 +153,10 @@ async def draw_user_img(uid: int, user_stats: dict) -> BytesIO:
             (1160, 100), f"仙力 {homes[0]['comfort_num']}", '#263238', set_font(28)
         )
         text_draw.text(
-            (1180, 150), f"{homes[0]['comfort_level_name']}", '#263238', set_font(28)
+            (1180, 150),
+            f"{format_comfort_level_name(homes[0]['comfort_num'])}",
+            '#263238',
+            set_font(28),
         )
 
     y = 200
@@ -234,7 +262,7 @@ async def draw_user_img(uid: int, user_stats: dict) -> BytesIO:
         char_element.paste(char_img, (4, 4), char_img)
         char_txt = ImageDraw.Draw(char_element)
         char_txt.text(
-            (6, 2),
+            (8, 2),
             f"C{character['actived_constellation_num']}",
             '#9575cd',
             set_font(20),
@@ -407,6 +435,13 @@ async def draw_char_img(uid: int, character: dict) -> BytesIO:
     return file
 
 
+def set_cookies(cn: bool) -> None:
+    gs.set_cookie(
+        ltuid=MIHOYO_COOKIE_LTUID if cn else HOYOLAB_COOKIE_LTUID,
+        ltoken=MIHOYO_COOKIE_LTOKEN if cn else HOYOLAB_COOKIE_LTOKEN,
+    )
+
+
 async def read_cache(cache_path: Path) -> Tuple[bool, dict]:
     outdated = True
     data = {}
@@ -431,10 +466,8 @@ async def get_user_stats(uid: int) -> dict:
         log.info(f'search user stats: {uid}')
         server = gs.recognize_server(uid)
         cn = is_chinese(uid)
-        gs.set_cookie(
-            ltuid=MIHOYO_COOKIE_LTUID if cn else HOYOLAB_COOKIE_LTUID,
-            ltoken=MIHOYO_COOKIE_LTOKEN if cn else HOYOLAB_COOKIE_LTOKEN,
-        )
+        set_cookies(cn)
+
         data = gs.fetch_endpoint(
             "game_record/genshin/api/index",
             chinese=cn,
@@ -464,10 +497,8 @@ async def get_user_characters(uid: int) -> list:
 
         server = gs.recognize_server(uid)
         cn = is_chinese(uid)
-        gs.set_cookie(
-            ltuid=MIHOYO_COOKIE_LTUID if cn else HOYOLAB_COOKIE_LTUID,
-            ltoken=MIHOYO_COOKIE_LTOKEN if cn else HOYOLAB_COOKIE_LTOKEN,
-        )
+        set_cookies(cn)
+
         resp = gs.fetch_endpoint(
             "game_record/genshin/api/character",
             chinese=cn,
