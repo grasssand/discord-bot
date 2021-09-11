@@ -237,7 +237,8 @@ async def draw_user_img(uid: int, user_stats: dict) -> BytesIO:
     # avatars
     box_x, box_y = 110, 10
     middle_img = None
-    for i, character in enumerate(user_stats['avatars'], 1):
+    characters = sorted(user_stats['avatars'], key=lambda c: -c['fetter'])
+    for i, character in enumerate(characters, 1):
         if middle_img is None:
             middle_img = Image.open('./static/images/card-new-middle.png').convert(
                 'RGBA'
