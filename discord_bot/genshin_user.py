@@ -77,7 +77,7 @@ def format_comfort_level_name(num: int) -> str:
     elif num >= 6000:
         name = '初显锦绣'
     elif num >= 4500:
-        name = '高门打屋'
+        name = '高门大屋'
     elif num >= 3000:
         name = '屋舍俨然'
     elif num >= 2000:
@@ -104,12 +104,9 @@ async def get_img_path(source: SourceType, id: int, url: Optional[str] = None) -
     if url and not img_path.is_file():
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
-                with open(img_path, 'wb') as f:
-                    while True:
-                        chunk = await resp.content.read(10)
-                        if not chunk:
-                            break
-                        f.write(chunk)
+                async with aiofiles.open(img_path, 'wb') as f:
+                    await f.write(await resp.read())
+
     return img_path
 
 
@@ -150,28 +147,11 @@ async def draw_user_img(uid: int, user_stats: dict) -> BytesIO:
     homes = user_stats['homes']
     if homes:
         text_draw.text(
-            (1160, 100), f"仙力 {homes[0]['comfort_num']}", '#263238', set_font(28)
+            (1160, 145), f"仙力 {homes[0]['comfort_num']}", '#263238', set_font(28)
         )
         text_draw.text(
-            (1180, 150),
-            f"{format_comfort_level_name(homes[0]['comfort_num'])}",
-            '#263238',
-            set_font(28),
+            (1180, 185), f"{homes[0]['comfort_level_name']}", '#263238', set_font(28)
         )
-
-    y = 200
-    size = (180, 180)
-    layer = Image.new('L', size)
-    draw = ImageDraw.Draw(layer)
-    draw.rounded_rectangle((0, 0, *size), fill=255, radius=30)
-    for home in ['hole', 'mountain', 'island']:
-        with Image.open(f'./static/genshin/homes/{home}.png').resize(size).convert(
-            'RGBA'
-        ) as f:
-            if not homes:
-                layer.paste(f, (0, 0), layer)
-            img.paste(f, (1150, y), layer)
-        y += 200
 
     # world_explorations
     world_explorations = user_stats['world_explorations']
@@ -248,7 +228,7 @@ async def draw_user_img(uid: int, user_stats: dict) -> BytesIO:
             SourceType.Avatar, character['id'], character['image']
         )
 
-        if character['name'] == 'Traveler':
+        if character['id'] in [10000005, 10000007]:
             traveler = (
                 Image.open(char_img_path)
                 .resize((180, 180), Image.BILINEAR)
@@ -335,9 +315,13 @@ async def draw_char_img(uid: int, character: dict) -> BytesIO:
     text_draw.text(
         (w + 40, h + 10), f'UID.{uid}', fill=element_color, font=set_font(20)
     )
+    # Aloy's rarity is 105
+    rarity = (
+        character['rarity'] if character['rarity'] < 100 else character['rarity'] - 100
+    )
     text_draw.text(
         (120, 40),
-        f"{'★' * character['rarity']}",
+        f"{'★' * rarity}",
         fill='#FFD942',
         font=set_font(40),
     )
@@ -446,12 +430,13 @@ def set_cookies(cn: bool) -> None:
 async def read_cache(cache_path: Path) -> Tuple[bool, dict]:
     outdated = True
     data = {}
-    now = datetime.now()
     if cache_path.is_file():
         async with aiofiles.open(cache_path, 'r', encoding='utf8') as f:
             contents = await f.read()
         contents = json.loads(contents)
-        if now - timedelta(hours=1) < datetime.fromtimestamp(contents['updated']):
+        if datetime.now() - timedelta(hours=1) < datetime.fromtimestamp(
+            contents['updated']
+        ):
             outdated = False
             data = contents['data']
             log.info(f'read cache file: {cache_path}')
@@ -470,9 +455,10 @@ async def get_user_stats(uid: int) -> dict:
         set_cookies(cn)
 
         data = gs.fetch_endpoint(
-            "game_record/genshin/api/index",
+            "https://bbs-api-os.mihoyo.com/game_record/genshin/api/index",
             chinese=cn,
             params=dict(server=server, role_id=uid),
+            headers={'x-rpc-language': 'zh-cn'},
         )
 
         stats = {'updated': datetime.now().timestamp(), 'data': data}
@@ -501,7 +487,7 @@ async def get_user_characters(uid: int) -> list:
         set_cookies(cn)
 
         resp = gs.fetch_endpoint(
-            "game_record/genshin/api/character",
+            "https://bbs-api-os.mihoyo.com/game_record/genshin/api/character",
             chinese=cn,
             method='POST',
             json=dict(character_ids=character_ids, role_id=uid, server=server),

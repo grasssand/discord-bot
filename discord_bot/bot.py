@@ -36,7 +36,7 @@ async def on_command_error(ctx, error):
         await ctx.send('出问题了，休息一下吧。||不要···会坏掉的···||')
 
 
-@bot.command(name='.', help='来点色图')
+@bot.command(name='.', help='来点涩图')
 async def setu(ctx, keyword: str = ''):
     log.info(f'setu for {ctx.author}')
     r18 = 2 if ctx.channel.is_nsfw() else 0

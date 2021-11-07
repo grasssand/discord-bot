@@ -1,4 +1,4 @@
-insert into genshin_characters
+replace into genshin_characters
 values
     (10000003, '琴', '琴|Jean'),
     (10000014, '芭芭拉', '芭芭拉|Barbara'),
@@ -35,4 +35,10 @@ values
     (10000048, '烟绯', '烟绯|Yanfei'),
     (10000002, '神里绫华', '神里绫华|Kamisato Ayaka'),
     (10000007, '荧', '荧|旅行者|Lumine|Traveler'),
-    (10000005, '空', '空|旅行者|Aether|Traveler');
+    (10000005, '空', '空|旅行者|Aether|Traveler'),
+    (10000052, '雷电将军', '雷电将军|雷神|Raiden Shogun|Ei'),
+    (10000062, '埃洛伊', '埃洛伊|Aloy'),
+    (10000053, '早柚', '早柚|Sayu'),
+    (10000049, '宵宫', '宵宫|Yoimiya'),
+    (10000054, '珊瑚宫心海', '珊瑚宫心海|Sangonomiya Kokomi'),
+    (10000050, '托马', '托马|Tohma');
