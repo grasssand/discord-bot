@@ -1,20 +1,16 @@
 import functools
 import os
 from contextlib import contextmanager
-from pathlib import Path
+from typing import List
 
-from dotenv import load_dotenv
+import loguru
 from sqlalchemy import Column, Integer, String, create_engine, select
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
-from discord_bot.logger import logger
+logger = loguru.logger
 
-log = logger(__name__)
-
-load_dotenv(Path(__file__).resolve().parent.parent / '.env', encoding='utf8')
-
-DATABASE_URL = os.getenv('DATABASE_URL')
+DATABASE_URL = os.environ["DATABASE_URL"]
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -36,7 +32,7 @@ def db_session(commit):
             session.commit()
     except Exception as e:
         session.rollback()
-        log.error(e)
+        logger.exception(e)
     finally:
         if session:
             session.close()
@@ -62,12 +58,12 @@ def same_as(column_name):
 
 
 class GenshinCharacter(Base):
-    __tablename__ = 'genshin_characters'
+    __tablename__ = "genshin_characters"
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
     alias_name = Column(
-        String, default=same_as('name')
+        String, default=same_as("name")
     )  # another name, like 刻晴|keqing|阿晴
 
     def __repr__(self) -> str:
@@ -78,11 +74,11 @@ Base.metadata.create_all(engine)
 
 
 @func_session()
-def get_character_id_by_name(session: Session, name: str) -> list[int]:
+def get_character_by_name(session: Session, name: str) -> List[GenshinCharacter]:
     return (
         session.execute(
-            select(GenshinCharacter.id).where(
-                GenshinCharacter.alias_name.ilike(f'%{name}%')
+            select(GenshinCharacter).where(
+                GenshinCharacter.alias_name.ilike(f"%{name}%")
             )
         )
         .scalars()
@@ -91,8 +87,13 @@ def get_character_id_by_name(session: Session, name: str) -> list[int]:
 
 
 @func_session()
-def get_character_name_by_id(session: Session, id: int) -> str:
+def get_all_character_name(session: Session) -> List[str]:
+    return session.execute(select(GenshinCharacter.alias_name)).scalars().all()
+
+
+@func_session()
+def get_character_name_by_id(session: Session, id: int) -> GenshinCharacter:
     (name,) = session.execute(
-        select(GenshinCharacter.name).where(GenshinCharacter.id == id)
+        select(GenshinCharacter).where(GenshinCharacter.id == id)
     ).first()
     return name

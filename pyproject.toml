@@ -1,20 +1,24 @@
 [tool.poetry]
 name = "discord-bot"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 authors = ["GrassSand <grasssand@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
-"discord.py" = "^1.7.3"
-python-dotenv = "^0.19.1"
-genshinstats = "^1.4.11"
-pillow = "^8.4.0"
+python = "^3.10"
+disnake = "^2.2.2"
+python-dotenv = "^0.19.2"
+loguru = "^0.5.3"
+aiohttp = "<3.8.0"
 aiofiles = "^0.7.0"
-sqlalchemy = "^1.4.26"
+aioredis = "^2.0.0"
+SQLAlchemy = "^1.4.27"
+Pillow = "^8.4.0"
+genshin = "^0.1.0"
+cachetools = "^4.2.4"
 
 [tool.poetry.dev-dependencies]
-black = "^21.10b0"
+black = "^21.11b1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

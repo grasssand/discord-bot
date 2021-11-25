@@ -5,10 +5,10 @@
 
 ```
 $ pip install -r requirements.txt
-$ python discord_bot/bot.py
+$ python -m bot
 ```
 
 ## Thanks
 - *setu api* <https://api.lolicon.app/#/setu>
-- *查询原神角色* <https://github.com/thesadru/genshinstats>
+- *查询原神角色* <https://github.com/thesadru/genshin.py>
 - *角色卡片资源* <https://github.com/SilveryStar/Adachi-BOT>
