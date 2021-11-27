@@ -17,9 +17,7 @@ from genshin.models.base import PartialCharacter
 from genshin.models.character import Character
 from genshin.models.stats import PartialUserStats
 from disnake.ext import commands
-from disnake.mentions import A
 from PIL import Image, ImageDraw, ImageFont
-from sqlalchemy.sql.functions import user
 
 from bot.utils import database
 from bot.utils.base_cog import BaseCog
@@ -334,9 +332,8 @@ def draw_character(uid: int, character: Character) -> Image.Image:
 
 
 class CustomGenshinClient(genshin.MultiCookieClient):
-    def __init__(self, redis, **kwargs) -> None:
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self.redis = redis
 
     def set_cookies(
         self,
@@ -374,7 +371,7 @@ class CustomGenshinClient(genshin.MultiCookieClient):
 class Genshin(BaseCog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.gensin_client = CustomGenshinClient(self.redis_session, debug=True)
+        self.gensin_client = CustomGenshinClient(debug=True)
         self.gensin_client.set_cache(maxsize=256, ttl=3600)
         self.q = asyncio.Queue()
         self.image_dir = "./static/genshin/"
@@ -418,11 +415,10 @@ class Genshin(BaseCog):
         )
 
     @commands.command(name="c", help="查询游戏角色详情")
-    async def genshin_character(self, ctx, uid: int, character_name: str):
+    async def genshin_character(self, ctx, uid: int, *character_name: str):
+        name = " ".join(character_name)
         start = time.perf_counter()
-        msg, filename, file = await self.create_genshin_character_data(
-            uid, character_name
-        )
+        msg, filename, file = await self.create_genshin_character_data(uid, name)
         if msg:
             await ctx.send(msg)
         else:
