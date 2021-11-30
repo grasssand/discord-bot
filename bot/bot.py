@@ -37,9 +37,11 @@ class Bot(commands.Bot):
 
     async def on_command_error(self, ctx, error) -> None:
         if isinstance(error, commands.CommandNotFound):
-            return
-
-        self.logger.error(f"{error}")
+            pass
+        elif isinstance(error, commands.CheckFailure):
+            await ctx.send("你没有权限运行这条命令哦！")
+        else:
+            self.logger.error(f"{error}")
 
     async def on_slash_command_error(
         self, inter: disnake.AppCmdInter, exception: commands.CommandError

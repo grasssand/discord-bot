@@ -87,11 +87,6 @@ def get_character_by_name(session: Session, name: str) -> List[GenshinCharacter]
 
 
 @func_session()
-def get_all_character_name(session: Session) -> List[str]:
-    return session.execute(select(GenshinCharacter.alias_name)).scalars().all()
-
-
-@func_session()
 def get_character_name_by_id(session: Session, id: int) -> GenshinCharacter:
     (name,) = session.execute(
         select(GenshinCharacter).where(GenshinCharacter.id == id)

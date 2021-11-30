@@ -533,7 +533,6 @@ class Genshin(BaseCog):
     async def search_genshin_character(
         self, uid: int, character_name: str
     ) -> Character:
-
         loop = asyncio.get_event_loop()
         characters = await loop.run_in_executor(
             None, database.get_character_by_name, character_name
@@ -541,40 +540,39 @@ class Genshin(BaseCog):
 
         if not characters:
             raise GenshinCogError(f"没有**{character_name}**，请输入正确的角色名")
-        if len(characters) > 2:
+        if len(characters) > 1:
             raise GenshinCogError(
                 f"查询到多个角色，要找的是不是 **{'**, **'.join(c.name for c in characters)}**"
             )
 
-        stats = await self.search_genshin_user(uid)
-        characters_list = [c.id for c in characters]
-        for c in stats.characters:
-            if c.id in characters_list:
-                key = f"bot:genshin:character:{uid}:{c.id}"
-                character = await self.redis_session.get(key)
-                if character:
-                    character = Character(**json.loads(character))
-                else:
-                    character = await self.gensin_client.get_characters(
-                        uid, [c.id], lang="zh-cn"
-                    )
-                    character = character[0]
-                    await self.redis_session.set(
-                        key, json.dumps(character.dict()), ex=3600
-                    )
-                if character.id not in self.static["characters"]:
-                    await self.q.put(("characters", character.id, character.image))
-                if character.weapon.id not in self.static["weapons"]:
-                    await self.q.put(
-                        ("weapons", character.weapon.id, character.weapon.icon)
-                    )
-                for artifact in character.artifacts:
-                    if artifact.id not in self.static["artifacts"]:
-                        await self.q.put(("artifacts", artifact.id, artifact.icon))
+        try:
+            key = f"bot:genshin:character:{uid}:{characters[0].id}"
+            character = await self.redis_session.get(key)
+            if character:
+                character = Character(**json.loads(character))
+            else:
+                character = await self.gensin_client.get_characters(
+                    uid, [characters[0].id], lang="zh-cn"
+                )
+                character = character[0]
+                await self.redis_session.set(key, json.dumps(character.dict()), ex=3600)
 
-                break
-        else:
-            raise GenshinCogError(f"用户[**{uid}**] 无此角色")
+            # The missing images.
+            if character.id not in self.static["characters"]:
+                await self.q.put(("characters", character.id, character.image))
+            if character.weapon.id not in self.static["weapons"]:
+                await self.q.put(
+                    ("weapons", character.weapon.id, character.weapon.icon)
+                )
+            for artifact in character.artifacts:
+                if artifact.id not in self.static["artifacts"]:
+                    await self.q.put(("artifacts", artifact.id, artifact.icon))
+
+        except genshin.errors.GenshinException as e:
+            if e.msg.startswith("User does not have"):
+                raise GenshinCogError(f"用户[**{uid}**] 无此角色")
+            else:
+                raise
 
         return character
 

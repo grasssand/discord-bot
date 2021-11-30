@@ -38,7 +38,7 @@ class Setu(BaseCog):
             await ctx.send(msg, file=disnake.File(BytesIO(file), filename))
 
     @commands.command(name="d", help="删除bot上条回复。不喜欢的涩图？那就跳过吧")
-    async def delete_last_message(self, ctx):
+    async def delete_last_message(self, ctx: commands.Context):
         message = await ctx.channel.history(limit=20).get(author=self.bot.user)
         if message:
             await message.delete()
@@ -75,7 +75,7 @@ class Setu(BaseCog):
 
         return msg, filename, file
 
-    async def fetch_setu_api(self, r18, query: str) -> Dict[str, Any]:
+    async def fetch_setu_api(self, r18: int, query: str) -> Dict[str, Any]:
         params = {"r18": r18, "size": ["original", "regular"], "proxy": "i.pixiv.cat"}
         if query:
             params["tag"] = query.split(",")
@@ -98,7 +98,7 @@ class Setu(BaseCog):
     )
     async def set_setu_task(
         self,
-        ctx,
+        ctx: commands.Context,
         option: bool,
         channel: disnake.TextChannel = None,
         interval_time: str = "1d",
@@ -113,7 +113,7 @@ class Setu(BaseCog):
 
         await ctx.send(result)
 
-    async def send_setu(self, channel) -> None:
+    async def send_setu(self, channel: disnake.TextChannel) -> None:
         r18 = 2 if getattr(channel, "nsfw", 0) else 0
         _, filename, file = await self.get_setu_source(r18)
         if filename:
