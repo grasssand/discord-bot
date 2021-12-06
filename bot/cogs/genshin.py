@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 import json
 import os
 import textwrap
@@ -16,7 +17,7 @@ import genshin
 from genshin.models.base import PartialCharacter
 from genshin.models.character import Character
 from genshin.models.stats import PartialUserStats
-from disnake.ext import commands
+from disnake.ext import commands, tasks
 from PIL import Image, ImageDraw, ImageFont
 
 from bot.utils import database
@@ -163,7 +164,7 @@ def draw_user_base(uid: int, data: PartialUserStats) -> Image.Image:
         set_font(24),
     )
 
-    for character in data.characters:
+    for character in data.characters[::-1]:
         if character.id in [10000005, 10000007]:
             with Image.open(f"./static/genshin/avatars/{character.id}.png").resize(
                 (180, 180), Image.BILINEAR
@@ -367,12 +368,16 @@ class CustomGenshinClient(genshin.MultiCookieClient):
 
         return self.cookies
 
+    def switch_session(self):
+        if len(self.sessions) > 1:
+            session = self.sessions.pop(0)
+            self.sessions.append(session)
+
 
 class Genshin(BaseCog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.gensin_client = CustomGenshinClient(debug=True)
-        self.gensin_client.set_cache(maxsize=256, ttl=3600)
+        self.genshin_client = CustomGenshinClient(debug=True)
         self.q = asyncio.Queue()
         self.image_dir = "./static/genshin/"
         self.static = {
@@ -390,16 +395,18 @@ class Genshin(BaseCog):
             ],
         }
 
+        self.note_task.start()
+
     async def cog_load(self) -> None:
         cookies = os.getenv("GENSHIN_COOKIES")
         if not cookies:
             raise Exception("Please set your `GENSHIN_COOKIES` in `.env`.")
 
         cookies = cookies.split("#")
-        self.gensin_client.set_cookies(cookies)
+        self.genshin_client.set_cookies(cookies)
 
     def cog_unload(self) -> None:
-        asyncio.create_task(self.gensin_client.close())
+        asyncio.create_task(self.genshin_client.close())
 
     @commands.command(name="u", help="查询游戏账号信息")
     async def genshin_user(self, ctx: commands.Context, uid: int):
@@ -427,6 +434,12 @@ class Genshin(BaseCog):
         self.logger.info(
             f"User[{ctx.author}] request Genshin[{uid}] Character[{character_name}] costed: {time.perf_counter() - start:.2f}s"
         )
+
+    @commands.is_owner()
+    @commands.command(name="n", help="查询原神实时便笺")
+    async def genshin_note(self, ctx: commands.Context):
+        embed = await self.create_genshin_note_data()
+        await ctx.send(embed=embed)
 
     @commands.slash_command()
     async def genshin(self, inter: disnake.AppCmdInter):
@@ -477,6 +490,13 @@ class Genshin(BaseCog):
             f"User[{inter.author}] request Genshin[{uid}] Character[{character_name}] costed: {time.perf_counter() - start:.2f}s"
         )
 
+    @commands.is_owner()
+    @genshin.sub_command()
+    async def note(self, inter: disnake.AppCmdInter):
+        await inter.response.defer()
+        embed = await self.create_genshin_note_data()
+        await inter.edit_original_message(embed=embed)
+
     async def create_genshin_user_data(self, uid: int) -> Tuple[str, str, BytesIO]:
         msg = ""
         filename = f"{uid}.png"
@@ -494,13 +514,28 @@ class Genshin(BaseCog):
 
         return msg, filename, file
 
+    @tasks.loop(hours=2)
+    async def note_task(self):
+        channel_id = os.getenv("GENSHIN_NOTE_CHANNEL_ID")
+        if not channel_id:
+            return
+
+        channel = self.bot.get_channel(int(channel_id))
+        if isinstance(channel, disnake.TextChannel):
+            embed = await self.create_genshin_note_data()
+            await channel.send(embed=embed)
+
+    @note_task.before_loop
+    async def before_note_task(self):
+        await self.bot.wait_until_ready()
+
     async def search_genshin_user(self, uid: int) -> PartialUserStats:
         key = f"bot:genshin:user:{uid}"
         stats = await self.redis_session.get(key)
         if stats:
             stats = PartialUserStats(**json.loads(stats))
         else:
-            stats = await self.gensin_client.get_partial_user(uid, lang="zh-cn")
+            stats = await self.genshin_client.get_partial_user(uid, lang="zh-cn")
             await self.redis_session.set(key, json.dumps(stats.dict()), ex=3600)
 
         for character in stats.characters:
@@ -551,7 +586,7 @@ class Genshin(BaseCog):
             if character:
                 character = Character(**json.loads(character))
             else:
-                character = await self.gensin_client.get_characters(
+                character = await self.genshin_client.get_characters(
                     uid, [characters[0].id], lang="zh-cn"
                 )
                 character = character[0]
@@ -575,6 +610,48 @@ class Genshin(BaseCog):
                 raise
 
         return character
+
+    async def create_genshin_note_data(self) -> disnake.Embed:
+        embed = disnake.Embed(title="实时便笺", timestamp=datetime.now())
+        embed.set_author(
+            name="Genshin",
+            url="https://webstatic-sea.hoyolab.com/app/community-game-records-sea#/ys",
+            icon_url="https://img-static.mihoyo.com/avatar/avatar1.png",
+        )
+
+        for _ in self.genshin_client.sessions:
+            record_card = await self.genshin_client.get_record_card()
+            notes = await self.genshin_client.get_notes(record_card.uid)
+            embed.add_field(
+                f"{record_card.nickname}",
+                f"{record_card.server_name} Lv.{record_card.level}",
+                inline=False,
+            )
+            embed.add_field(
+                f"源粹树脂",
+                f"`{notes.current_resin}/{notes.max_resin}` "
+                f"({disnake.utils.format_dt(notes.resin_recovered_at, style='R')}"
+                f"<{notes.resin_recovered_at:%m-%d %H:%M}> 恢复)",
+                inline=False,
+            )
+            embed.add_field(
+                "每日委托", f"`{notes.completed_commissions}/{notes.max_comissions}\n`"
+            )
+            embed.add_field(
+                "值得铭记的强敌",
+                f"`{notes.remaining_resin_discounts}/{notes.max_resin_discounts}\n`",
+            )
+            embed.add_field(
+                "探索派遣",
+                f"`{sum(i.finished for i in notes.expeditions)}/{notes.max_expeditions}\n`",
+            )
+            embed.add_field(f"{'-' * 40}", "\u200b")
+
+            self.genshin_client.switch_session()
+
+        embed.remove_field(-1)
+
+        return embed
 
     async def _draw_user_stats(
         self, uid: int, stats: PartialUserStats, file: BytesIO
