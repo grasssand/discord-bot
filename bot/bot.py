@@ -15,8 +15,7 @@ class Bot(commands.Bot):
         super().__init__(*args, **kwargs)
         self.http_session = aiohttp.ClientSession(trust_env=True)
         self.redis_session = None
-        self.db = None
-        self.logger: loguru.Logger = loguru.logger
+        self.logger = loguru.logger
 
     async def start(self, token: str, *, reconnect: bool = True) -> None:
         self.redis_session = self._create_redis_session()
@@ -35,7 +34,9 @@ class Bot(commands.Bot):
     async def on_ready(self) -> None:
         self.logger.info(f"{self.user} has connected to Discord!")
 
-    async def on_command_error(self, ctx, error) -> None:
+    async def on_command_error(
+        self, ctx: commands.Context, error: commands.CommandError
+    ) -> None:
         if isinstance(error, commands.CommandNotFound):
             pass
         elif isinstance(error, commands.CheckFailure):

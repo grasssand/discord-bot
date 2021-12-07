@@ -21,8 +21,10 @@ class Setu(BaseCog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        await super().on_ready()
+
         tasks = await self.redis_session.hgetall("bot:setu:tasks")
-        self.logger.info(f"Setu tasks: {tasks}")
+        self.logger.debug(f"Setu tasks: {tasks}")
         for guild_id, task in tasks.items():
             channel_id, num = task.split(";")
             self._setu_task(guild_id, True, int(channel_id), int(num))
@@ -70,7 +72,7 @@ class Setu(BaseCog):
         except SetuCogError as e:
             msg = str(e)
         except Exception as e:
-            self.logger.exception(f"Fetching Setu error：{e}")
+            self.logger.error(f"Fetching Setu error：{e}")
             msg = "出问题了，休息一下吧。||不要···会坏掉的···||"
 
         return msg, filename, file
@@ -100,7 +102,7 @@ class Setu(BaseCog):
         self,
         ctx: commands.Context,
         option: bool,
-        channel: disnake.TextChannel = None,
+        channel: Optional[disnake.TextChannel] = None,
         interval_time: str = "1d",
     ):
         r = re.match(r"(\d+)([smhdSMHD]).*", interval_time)
@@ -123,7 +125,7 @@ class Setu(BaseCog):
         self,
         guild_id: str,
         option: bool,
-        channel: Union[disnake.TextChannel, int, None],
+        channel: Optional[Union[disnake.TextChannel, int]],
         interval_time: int,
     ) -> str:
         task = self._tasks.get(guild_id)
@@ -132,7 +134,7 @@ class Setu(BaseCog):
             if task is None:
                 task = tasks.loop(seconds=interval_time)(self.send_setu)
             if isinstance(channel, int):
-                channel = self.bot.get_channel(channel)
+                channel = self.bot.get_channel(channel)  # type: ignore
 
             self.logger.info(
                 f"Create a Setu task in [{guild_id}]#{channel.name}, runing per {interval_time}s"

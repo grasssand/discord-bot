@@ -215,7 +215,6 @@ def draw_user_characters(characters: List[PartialCharacter]) -> Image.Image:
 
 
 def draw_character(uid: int, character: Character) -> Image.Image:
-    time.sleep(10)
     element_color = ELEMENT_COLORS[character.element]
     size_w, size_h = 614, 1108
     img = Image.new(
@@ -341,10 +340,10 @@ class CustomGenshinClient(genshin.MultiCookieClient):
         cookie_list: Union[Iterable[Union[Mapping[str, Any], str]], str],
         clear: bool = True,
     ) -> List[Mapping[str, str]]:
-        """Set a list of cookies
-
-        :param cookie_list: A list of cookies or a json file containing cookies
-        :param clear: Whether to clear all of the previous cookies
+        """Same method as the parent class,
+        but allows the `aiohttp.ClientSession` to use the system proxy.
+        It's useful when requesting `https://bbs-api-os.mihoyo.com/`
+        from China raises `403 Forbidden`.
         """
         if clear:
             self.sessions.clear()
@@ -357,10 +356,6 @@ class CustomGenshinClient(genshin.MultiCookieClient):
                 raise RuntimeError("Json file must contain a list of cookies")
 
         for cookies in cookie_list:
-            """
-            Request `https://bbs-api-os.mihoyo.com/` will raise `403 Forbidden` in China,
-            set `trust_env=True` to use the system proxy.
-            """
             session = aiohttp.ClientSession(
                 cookies=SimpleCookie(cookies), trust_env=True
             )
@@ -418,7 +413,8 @@ class Genshin(BaseCog):
             await ctx.send(file=disnake.File(file, filename=filename))
 
         self.logger.info(
-            f"User[{ctx.author}] request Genshin[{uid}] costed: {time.perf_counter() - start:.2f}s"
+            f"User[{ctx.author}] request Genshin[{uid}] "
+            f"costed: {time.perf_counter() - start:.2f}s"
         )
 
     @commands.command(name="c", help="查询游戏角色详情")
@@ -432,7 +428,8 @@ class Genshin(BaseCog):
             await ctx.send(file=disnake.File(file, filename=filename))
 
         self.logger.info(
-            f"User[{ctx.author}] request Genshin[{uid}] Character[{character_name}] costed: {time.perf_counter() - start:.2f}s"
+            f"User[{ctx.author}] request Genshin[{uid}] Character[{name}] "
+            f"costed: {time.perf_counter() - start:.2f}s"
         )
 
     @commands.is_owner()
@@ -463,7 +460,8 @@ class Genshin(BaseCog):
             )
 
         self.logger.info(
-            f"User[{inter.author}] request Genshin[{uid}] costed: {time.perf_counter() - start:.2f}s"
+            f"User[{inter.author}] request Genshin[{uid}] "
+            f"costed: {time.perf_counter() - start:.2f}s"
         )
 
     @genshin.sub_command()
@@ -487,7 +485,8 @@ class Genshin(BaseCog):
             )
 
         self.logger.info(
-            f"User[{inter.author}] request Genshin[{uid}] Character[{character_name}] costed: {time.perf_counter() - start:.2f}s"
+            f"User[{inter.author}] request Genshin[{uid}] Character[{character_name}] "
+            f"costed: {time.perf_counter() - start:.2f}s"
         )
 
     @commands.is_owner()
@@ -510,7 +509,7 @@ class Genshin(BaseCog):
             msg = "该用户隐藏了自己的秘密。"
         except Exception as e:
             msg = "查询失败。"
-            self.logger.exception(e)
+            self.logger.error(e)
 
         return msg, filename, file
 
@@ -562,7 +561,7 @@ class Genshin(BaseCog):
             msg = "该用户隐藏了自己的秘密。"
         except Exception as e:
             msg = "查询失败。"
-            self.logger.exception(e)
+            self.logger.error(e)
         return msg, filename, file
 
     async def search_genshin_character(
@@ -733,7 +732,8 @@ class Genshin(BaseCog):
             await f.write(await resp.read())
         self.static[image_type].append(id)
         self.logger.debug(
-            f"Download [{self.image_dir}{image_type}/{id}.png] succeed: {data[0]}[{data[1]}]: {data[2]}."
+            f"Download [{self.image_dir}{image_type}/{id}.png] "
+            f"succeed: {data[0]}[{data[1]}]: {data[2]}."
         )
 
 
