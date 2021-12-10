@@ -24,10 +24,13 @@ class Setu(BaseCog):
         await super().on_ready()
 
         tasks = await self.redis_session.hgetall("bot:setu:tasks")
-        self.logger.debug(f"Setu tasks: {tasks}")
         for guild_id, task in tasks.items():
             channel_id, num = task.split(";")
             self._setu_task(guild_id, True, int(channel_id), int(num))
+
+    def cog_unload(self):
+        for task in self._tasks.values():
+            task.cancel()
 
     @commands.command(name=".", help="来点涩图")
     async def setu(self, ctx: commands.Context, *, query: str = "") -> None:
@@ -78,7 +81,7 @@ class Setu(BaseCog):
         return msg, filename, file
 
     async def fetch_setu_api(self, r18: int, query: str) -> Dict[str, Any]:
-        params = {"r18": r18, "size": ["original", "regular"], "proxy": "i.pixiv.cat"}
+        params = {"r18": r18, "size": ["original", "regular"], "proxy": ""}
         if query:
             params["tag"] = query.split(",")
         if os.getenv("DISCORD_PROXY"):
@@ -137,7 +140,7 @@ class Setu(BaseCog):
                 channel = self.bot.get_channel(channel)  # type: ignore
 
             self.logger.info(
-                f"Create a Setu task in [{guild_id}]#{channel.name}, runing per {interval_time}s"
+                f"Create a Setu task in #{channel.name}, runing per {interval_time}s"
             )
             task.change_interval(seconds=interval_time)
             if task.is_running():

@@ -31,6 +31,9 @@ for cog in pkgutil.walk_packages(cogs.__path__, cogs.__name__ + "."):
     if not cog.ispkg:
         imported = importlib.import_module(cog.name)
         if inspect.isfunction(getattr(imported, "setup", None)):
-            bot.load_extension(cog.name)
+            try:
+                bot.load_extension(cog.name)
+            except Exception as e:
+                bot.logger.error(e)
 
 bot.run(os.getenv("DISCORD_TOKEN"))

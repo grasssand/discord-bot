@@ -373,6 +373,10 @@ class Genshin(BaseCog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.genshin_client = CustomGenshinClient(debug=True)
+        if not (cookies := os.getenv("GENSHIN_COOKIES")):
+            raise Exception("Please set your `GENSHIN_COOKIES` in `.env`.")
+        self.genshin_client.set_cookies(cookies.split("#"))
+
         self.q = asyncio.Queue()
         self.image_dir = "./static/genshin/"
         self.static = {
@@ -390,17 +394,14 @@ class Genshin(BaseCog):
             ],
         }
 
-        self.note_task.start()
-
-    async def cog_load(self) -> None:
-        cookies = os.getenv("GENSHIN_COOKIES")
-        if not cookies:
-            raise Exception("Please set your `GENSHIN_COOKIES` in `.env`.")
-
-        cookies = cookies.split("#")
-        self.genshin_client.set_cookies(cookies)
+        self.note_channel = None
+        self.note_channel_id = None
+        if note_channel_id := os.getenv("GENSHIN_NOTE_CHANNEL_ID"):
+            self.note_channel_id = int(note_channel_id)
+            self.note_task.start()
 
     def cog_unload(self) -> None:
+        self.note_task.cancel()
         asyncio.create_task(self.genshin_client.close())
 
     @commands.command(name="u", help="查询游戏账号信息")
@@ -515,18 +516,21 @@ class Genshin(BaseCog):
 
     @tasks.loop(hours=2)
     async def note_task(self):
-        channel_id = os.getenv("GENSHIN_NOTE_CHANNEL_ID")
-        if not channel_id:
-            return
-
-        channel = self.bot.get_channel(int(channel_id))
-        if isinstance(channel, disnake.TextChannel):
-            embed = await self.create_genshin_note_data()
-            await channel.send(embed=embed)
+        embed = await self.create_genshin_note_data()
+        await self.note_channel.send(embed=embed)
 
     @note_task.before_loop
     async def before_note_task(self):
         await self.bot.wait_until_ready()
+        channel = self.bot.get_channel(self.note_channel_id)  # type: ignore
+        if isinstance(channel, disnake.TextChannel):
+            self.note_channel = channel
+        else:
+            self.note_task.cancel()
+            self.logger.warning(
+                f"GENSHIN_NOTE_CHANNEL_ID: {self.note_channel_id} is not a <TextChannel>. "
+                "Note task was cancelled."
+            )
 
     async def search_genshin_user(self, uid: int) -> PartialUserStats:
         key = f"bot:genshin:user:{uid}"
@@ -670,7 +674,7 @@ class Genshin(BaseCog):
             ),
         )
 
-        user_stats_image = await loop.run_in_executor(None, concat_images, images)
+        user_stats_image = await loop.run_in_executor(executor, concat_images, images)
 
         user_stats_image.save(file, format="PNG")
         file.seek(0)
@@ -730,6 +734,7 @@ class Genshin(BaseCog):
 
         async with aiofiles.open(f"{self.image_dir}{image_type}/{id}.png", "wb") as f:
             await f.write(await resp.read())
+        await resp.release()
         self.static[image_type].append(id)
         self.logger.debug(
             f"Download [{self.image_dir}{image_type}/{id}.png] "
