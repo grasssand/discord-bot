@@ -103,66 +103,33 @@ def draw_user_base(uid: int, data: PartialUserStats) -> Image.Image:
         text_draw.text((1180, 185), f"{homes.comfort_name}", "#263238", set_font(28))
 
     # world_explorations
-    world = data.explorations
-    # world = data.explorations[0]
-    # id=4 稻妻
-    text_draw.text(
-        (400, 548),
-        f"{world[0].explored / 10}%",
-        "#fff",
-        set_font(24),
-    )
-    text_draw.text(
-        (320, 610),
-        f"Lv.{world[0].level}",
-        "#fff",
-        set_font(24),
-    )
-    text_draw.text(
-        (462, 610),
-        f"Lv.{world[0].offerings[0].level}",
-        "#fff",
-        set_font(24),
-    )
-    # id=3 龙脊雪山
-    text_draw.text(
-        (900, 548),
-        f"{world[1].explored / 10}%",
-        "#fff",
-        set_font(24),
-    )
-    text_draw.text(
-        (900, 610),
-        f"Lv.{world[1].level}",
-        "#fff",
-        set_font(24),
-    )
-    # id=2 璃月
-    text_draw.text(
-        (400, 700),
-        f"{world[2].explored / 10}%",
-        "#fff",
-        set_font(24),
-    )
-    text_draw.text(
-        (400, 764),
-        f"Lv.{world[0].level}",
-        "#fff",
-        set_font(24),
-    )
-    # id=1 蒙德
-    text_draw.text(
-        (900, 700),
-        f"{world[3].explored / 10}%",
-        "#fff",
-        set_font(24),
-    )
-    text_draw.text(
-        (900, 764),
-        f"Lv.{world[3].level}",
-        "#fff",
-        set_font(24),
-    )
+    pos_worlds = {
+        1: [(900, 700), (900, 764)],  # 蒙德
+        2: [(400, 700), (400, 764)],  # 璃月
+        3: [(900, 548), (900, 610)],  # 龙脊雪山
+        4: [(400, 548), (320, 610)],  # 稻妻
+    }
+    for world in data.explorations:
+        if pos_world := pos_worlds.get(world.id):
+            text_draw.text(
+                pos_world[0],
+                f"{world.explored / 10}%",
+                "#fff",
+                set_font(24),
+            )
+            text_draw.text(
+                pos_world[1],
+                f"Lv.{world.level}",
+                "#fff",
+                set_font(24),
+            )
+            if world.id == 4:
+                text_draw.text(
+                    (462, 610),
+                    f"Lv.{world.offerings[0].level}",
+                    "#fff",
+                    set_font(24),
+                )
 
     for character in data.characters[::-1]:
         if character.id in [10000005, 10000007]:
